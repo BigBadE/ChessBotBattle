@@ -26,7 +26,7 @@ pub const SEVENTH_ROW: u64 = 0x00_00_00_00_00_00_FF_00;
 pub const BOTTOM_ROW: u64 = 0x00_00_00_00_00_00_00_FF;
 pub const LEFT_SIDE: u64 = 0x90_90_90_90_90_90_90_90;
 pub const RIGHT_SIDE: u64 = 0x01_01_01_01_01_01_01_01;
-pub const PIECES: [char; 12] = ['♙', '♘', '♗', '♖', '♕', '♔', '♟', '♞', '♝', '♜', '♛', '♚'];
+pub const PIECES: [char; 12] = ['♟', '♞', '♝', '♜', '♛', '♚', '♙', '♘', '♗', '♖', '♕', '♔'];
 
 #[derive(Clone)]
 pub struct ChessBoard {
@@ -59,15 +59,13 @@ impl ChessBoard {
         };
     }
 
-    pub fn move_piece(&mut self, piece: Pieces, team: Teams, location: (u8, u8), target: (u8, u8), promotion: Option<Pieces>) -> bool {
+    pub fn move_piece_bits(&mut self, piece: Pieces, team: Teams, location: u64, target: u64, promotion: Option<Pieces>) -> bool {
         //Make sure the piece exists
-        let location = convert_to_flat(location);
         if (self.board[piece as usize + team as usize] & location) == 0 {
             return false;
         }
 
         //Make sure the move is a legal move
-        let target = convert_to_flat(target);
         if !piece.get_moves(location, team, &self, false).contains(&target) {
             return false;
         }
@@ -117,6 +115,12 @@ impl ChessBoard {
         self.board[piece] = (self.board[piece] ^ location) + target;
         self.check_game_status();
         return true;
+    }
+
+    pub fn move_piece(&mut self, piece: Pieces, team: Teams, location: (u8, u8), target: (u8, u8), promotion: Option<Pieces>) -> bool {
+        let target = (target.0, 7-target.1);
+        let location = (location.0, 7-location.1);
+        return self.move_piece_bits(piece, team, convert_to_flat(location), convert_to_flat(target), promotion);
     }
 
     fn check_game_status(&mut self) {
@@ -179,7 +183,7 @@ impl ChessBoard {
 
         let mut index = 1u64;
         for _ in 0..64 {
-            if self.board[piece] & index == 1 {
+            if (self.board[piece] & index) != 0 {
                 output.push(index);
             }
             index <<= 1;
@@ -190,10 +194,6 @@ impl ChessBoard {
 
 pub fn convert_to_flat(location: (u8, u8)) -> u64 {
     return 0b1 << (location.0 + location.1 * 8);
-}
-
-pub fn convert_back(location: u64) -> (u8, u8) {
-    return ((location % 8) as u8, (location / 8) as u8);
 }
 
 fn creates_check(mut board: ChessBoard, team: Teams, location: u64, target: u64) -> bool {
@@ -210,7 +210,8 @@ fn is_in_check(board: &ChessBoard, position: u64, team: Teams) -> bool {
         let piece_enum = Pieces::from(piece as u8);
         let mut index = 1u64;
         for _ in 0..64 {
-            if board.board[piece as usize] & index == 1 && piece_enum.get_moves(index, !team, board, true).contains(&position) {
+            if board.board[piece as usize] & index == 1 &&
+                piece_enum.get_moves(index, !team, board, true).contains(&position) {
                 return true;
             }
             index <<= 1;
@@ -236,7 +237,8 @@ impl Display for ChessBoard {
             }
 
             if !found {
-                board.push('\u{00A0}');
+                board.push('\u{2002}');
+                board.push('\u{2002}');
             }
 
             if i % 8 == 7 {
@@ -494,6 +496,18 @@ impl From<u8> for Pieces {
     }
 }
 
+impl Display for Pieces {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return match self {
+            Pieces::Pawn => write!(f, "Pawn"),
+            Pieces::Rook => write!(f, "Rook"),
+            Pieces::Knight => write!(f, "Knight"),
+            Pieces::Bishop => write!(f, "Bishop"),
+            Pieces::King => write!(f, "King"),
+            Pieces::Queen => write!(f, "Queen")
+        }
+    }
+}
 #[derive(Clone, Copy)]
 pub enum Teams {
     White = 0,
@@ -530,6 +544,15 @@ impl Not for Teams {
             Teams::White => Teams::Black,
             Teams::Black => Teams::White
         };
+    }
+}
+
+impl Display for Teams {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return match self {
+            Teams::White => write!(f, "White"),
+            Teams::Black => write!(f, "Black")
+        }
     }
 }
 
