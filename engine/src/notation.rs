@@ -32,7 +32,7 @@ pub fn parse_notation(moves: &str) -> ChessBoard {
 
         let target= (target.0, 7-target.1);
         let mut moved = false;
-        //println!("Target: {} ({:b})", convert_to_flat(target), convert_to_flat(target));
+        println!("Target: {} ({:b})", convert_to_flat(target), convert_to_flat(target));
         for bit_position in board.get_pieces(piece as usize + team as usize) {
             println!("Moving {:b}: {}", bit_position, piece.get_moves(bit_position, team, &board, false)
                 .iter().map(|found| format!("{:b}, ", *found)).collect::<String>());

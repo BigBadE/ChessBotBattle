@@ -206,11 +206,11 @@ fn creates_check(mut board: ChessBoard, team: Teams, location: u64, target: u64)
 }
 
 fn is_in_check(board: &ChessBoard, position: u64, team: Teams) -> bool {
-    for piece in !team as usize..!team as usize + 6 {
+    for piece in (!team).non_king_pieces() {
         let piece_enum = Pieces::from(piece as u8);
         let mut index = 1u64;
         for _ in 0..64 {
-            if board.board[piece as usize] & index == 1 &&
+            if board.board[piece as usize] & index != 0 &&
                 piece_enum.get_moves(index, !team, board, true).contains(&position) {
                 return true;
             }
@@ -256,8 +256,8 @@ pub enum Pieces {
     Knight = 1,
     Bishop = 2,
     Rook = 3,
-    King = 4,
-    Queen = 5,
+    Queen = 4,
+    King = 5
 }
 
 impl Pieces {
@@ -276,10 +276,10 @@ impl Pieces {
                     }
 
                     //Check if the pawn can take left
-                    if board.board[12] & (position >> 7) == 1 {
+                    if board.board[12] & (position >> 7) != 0 {
                         let mut can_take = false;
                         for piece in (!team).pieces() {
-                            if board.board[piece] & (position >> 7) == 1 {
+                            if board.board[piece] & (position >> 7) != 0 {
                                 can_take = true;
                             }
                         }
@@ -289,10 +289,10 @@ impl Pieces {
                     }
 
                     //Check if pawn can take right
-                    if board.board[12] & (position >> 9) == 1 {
+                    if board.board[12] & (position >> 9) != 0 {
                         let mut can_take = false;
                         for piece in (!team).pieces() {
-                            if board.board[piece] & (position >> 9) == 1 {
+                            if board.board[piece] & (position >> 9) != 0 {
                                 can_take = true;
                             }
                         }
@@ -321,10 +321,10 @@ impl Pieces {
                     }
 
                     //Check if the pawn can take left
-                    if board.board[12] & (position << 7) == 1 {
+                    if board.board[12] & (position << 7) != 0 {
                         let mut can_take = false;
                         for piece in (!team).pieces() {
-                            if board.board[piece] & (position << 7) == 1 {
+                            if board.board[piece] & (position << 7) != 0 {
                                 can_take = true;
                             }
                         }
@@ -334,10 +334,10 @@ impl Pieces {
                     }
 
                     //Check if pawn can take right
-                    if board.board[12] & (position << 9) == 1 {
+                    if board.board[12] & (position << 9) != 0 {
                         let mut can_take = false;
                         for piece in (!team).pieces() {
-                            if board.board[piece] & (position << 9) == 1 {
+                            if board.board[piece] & (position << 9) != 0 {
                                 can_take = true;
                             }
                         }
@@ -358,16 +358,20 @@ impl Pieces {
             Pieces::Bishop => {
                 let mut output = Vec::new();
                 //Down Right
-                Self::move_piece(&mut output, position, team, board, |position| position & BOTTOM_ROW != 0,
+                Self::move_piece(&mut output, position, team, board,
+                                 |position| position & BOTTOM_ROW != 0 || position & RIGHT_SIDE != 0,
                                  |position| position >> 9);
                 //Down Left
-                Self::move_piece(&mut output, position, team, board, |position| position & BOTTOM_ROW != 0,
+                Self::move_piece(&mut output, position, team, board,
+                                 |position| position & BOTTOM_ROW != 0 || position & LEFT_SIDE != 0,
                                  |position| position >> 7);
                 //Up Right
-                Self::move_piece(&mut output, position, team, board, |position| position & TOP_ROW != 0,
+                Self::move_piece(&mut output, position, team, board,
+                                 |position| position & TOP_ROW != 0 || position & LEFT_SIDE != 0,
                                  |position| -> u64 { position << 9 });
                 //Up Left
-                Self::move_piece(&mut output, position, team, board, |position| position & TOP_ROW != 0,
+                Self::move_piece(&mut output, position, team, board,
+                                 |position| position & TOP_ROW != 0 || position & RIGHT_SIDE != 0,
                                  |position| -> u64 { position << 7 });
                 output
             }
@@ -377,13 +381,13 @@ impl Pieces {
                 Self::move_piece(&mut output, position, team, board, |position| position & BOTTOM_ROW != 0,
                                  |position| position >> 8);
                 //Down Left
-                Self::move_piece(&mut output, position, team, board, |position| position & BOTTOM_ROW != 0,
+                Self::move_piece(&mut output, position, team, board, |position| position & RIGHT_SIDE != 0,
                                  |position| position >> 1);
                 //Up Right
                 Self::move_piece(&mut output, position, team, board, |position| position & TOP_ROW != 0,
                                  |position| -> u64 { position << 8 });
                 //Up Left
-                Self::move_piece(&mut output, position, team, board, |position| position & TOP_ROW != 0,
+                Self::move_piece(&mut output, position, team, board, |position| position & LEFT_SIDE != 0,
                                  |position| -> u64 { position << 1 });
                 output
             },
@@ -454,6 +458,7 @@ impl Pieces {
             if border(copy) {
                 break;
             }
+
             copy = operation(copy);
             //Check global board
             if board.board[12] & copy != 0 {
@@ -464,6 +469,7 @@ impl Pieces {
                         continue 'outer;
                     }
                 }
+                break
             } else {
                 output.push(copy);
             }
@@ -524,6 +530,10 @@ impl Teams {
             Teams::White => GameStatus::WhiteWin,
             Teams::Black => GameStatus::BlackWin
         };
+    }
+
+    pub fn non_king_pieces(&self) -> Range<usize> {
+        return *self as usize..*self as usize + 5;
     }
 
     pub fn pieces(&self) -> Range<usize> {
