@@ -447,21 +447,25 @@ impl Pieces {
         return output;
     }
 
+    //Move a sliding piece according to the function with respect to the border
     fn move_piece(output: &mut Vec<u64>, position: u64, team: Teams, board: &ChessBoard, border: fn(u64) -> bool, operation: fn(u64) -> u64) {
         let mut copy = position;
-        loop {
+        'outer: loop {
             if border(copy) {
                 break;
             }
             copy = operation(copy);
+            //Check global board
             if board.board[12] & copy != 0 {
+                //Check enemy pieces
                 for i in (!team).pieces() {
                     if board.board[i] & copy != 0 {
                         output.push(copy);
-                        break;
+                        continue 'outer;
                     }
                 }
-                break;
+            } else {
+                output.push(copy);
             }
         }
     }
